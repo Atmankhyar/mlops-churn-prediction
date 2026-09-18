@@ -1,0 +1,80 @@
+name: CD — Deploy to AWS EC2
+
+on:
+  push:
+    branches: [main]
+
+env:
+  APP_DIR: /home/ubuntu/mlops-churn-prediction
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ubuntu@${{ secrets.EC2_HOST }} << 'REMOTE'
+            set -e
+            echo "=== Pulling latest code ==="
+            if [ -d "${{ env.APP_DIR }}" ]; then
+              cd ${{ env.APP_DIR }}
+              git pull origin main
+            else
+              git clone ${{ secrets.REPO_URL }} ${{ env.APP_DIR }}
+              cd ${{ env.APP_DIR }}
+            fi
+
+            echo "=== Writing .env file ==="
+            cat > .env << EOF
+          MLFLOW_TRACKING_URI=http://localhost:5000
+          MLFLOW_MODEL_NAME=${{ secrets.MLFLOW_MODEL_NAME }}
+          SNOWFLAKE_ACCOUNT=${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER=${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD=${{ secrets.SNOWFLAKE_PASSWORD }}
+          S3_ARTIFACT_BUCKET=${{ secrets.S3_ARTIFACT_BUCKET }}
+          ENVIRONMENT=production
+          EOF
+
+            echo "=== Rebuilding and restarting containers ==="
+            docker compose down --remove-orphans
+            docker compose up -d --build
+
+            echo "=== Waiting for API to become healthy ==="
+            sleep 15
+            curl -f http://localhost:8000/health || {
+              echo "Health check failed! Check logs:"
+              docker compose logs api --tail=50
+              exit 1
+            }
+            echo "=== Deployment successful! ==="
+          REMOTE
+
+      - name: Verify deployment
+        run: |
+          sleep 5
+          RESPONSE=$(curl -s http://${{ secrets.EC2_HOST }}:8000/health)
+          echo "Health check response: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"status":"ok"' || {
+            echo "Deployment health check failed!"
+            exit 1
+          }
+          echo "Deployment verified successfully."
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment FAILED for commit ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Actor: ${{ github.actor }}"
