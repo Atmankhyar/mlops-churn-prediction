@@ -1,0 +1,47 @@
+experiment_name: "churn-prediction"
+model_name: "churn-predictor"
+
+features:
+  numerical:
+    - tenure_months
+    - total_spending_3m
+    - avg_monthly_charge
+    - payment_failure_rate
+    - transaction_count_3m
+    - support_tickets_3m
+    - avg_resolution_days
+    - avg_sentiment
+  categorical:
+    - contract_type
+
+target: churned
+
+train_test_split:
+  test_size: 0.2
+  random_state: 42
+  stratify: true
+
+random_forest:
+  n_estimators: 200
+  max_depth: 10
+  min_samples_leaf: 5
+  class_weight: "balanced"
+  random_state: 42
+
+xgboost:
+  n_estimators: 300
+  max_depth: 6
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  scale_pos_weight: 3
+  random_state: 42
+  eval_metric: auc
+  use_label_encoder: false
+
+metrics:
+  - accuracy
+  - f1
+  - roc_auc
+  - precision
+  - recall

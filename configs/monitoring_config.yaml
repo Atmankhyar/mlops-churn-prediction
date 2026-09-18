@@ -1,0 +1,18 @@
+drift:
+  p_value_threshold: 0.05
+  features_to_monitor:
+    - tenure_months
+    - total_spending_3m
+    - avg_monthly_charge
+    - payment_failure_rate
+    - avg_sentiment
+  prediction_column: churn_probability
+  target_column: churned
+
+reports:
+  output_dir: monitoring/reports/
+  frequency: weekly
+
+data_quality:
+  missing_value_threshold: 0.05   # alert if >5% nulls
+  outlier_std_threshold: 4.0      # alert if value > 4 std devs from mean
