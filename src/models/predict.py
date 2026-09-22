@@ -33,25 +33,62 @@ def load_model_from_registry(
     return model
 
 
+def _native_estimator(model):
+    """Return the estimator underneath an MLflow pyfunc wrapper, if reachable.
+
+    MLflow wraps sklearn and xgboost models in a pyfunc whose ``predict``
+    delegates to the estimator's ``predict`` — which for a classifier returns
+    hard 0/1 class labels, not probabilities. To report a real churn
+    probability we need ``predict_proba``, so unwrap to the estimator itself.
+    Returns None when no probability-capable estimator can be reached, in
+    which case the caller falls back to ``model.predict``.
+    """
+    if hasattr(model, "predict_proba"):
+        return model
+
+    impl = getattr(model, "_model_impl", None)
+    if impl is None:
+        return None
+
+    for attr in ("sklearn_model", "xgb_model"):
+        inner = getattr(impl, attr, None)
+        if inner is not None and hasattr(inner, "predict_proba"):
+            return inner
+
+    return None
+
+
 def predict_churn(
     model,
     features: pd.DataFrame,
+    threshold: float = 0.5,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Run inference and return predictions + probabilities.
 
     Args:
-        model: Loaded MLflow pyfunc model.
+        model: Loaded MLflow pyfunc model (or a bare sklearn-style estimator).
         features: DataFrame with the same columns used during training.
+        threshold: Probability at or above which a customer is flagged churned.
 
     Returns:
         Tuple of (binary_predictions, churn_probabilities).
     """
-    proba = model.predict(features)
-    if hasattr(proba, "values"):
-        proba = proba.values
-    if proba.ndim == 2:
+    estimator = _native_estimator(model)
+
+    if estimator is not None:
+        proba = estimator.predict_proba(features)
+    else:
+        # Last resort: the wrapper only exposes predict(). The values may be
+        # class labels rather than probabilities.
+        proba = model.predict(features)
+
+    proba = np.asarray(getattr(proba, "values", proba))
+
+    if proba.ndim == 2 and proba.shape[1] > 1:
         churn_prob = proba[:, 1]
     else:
-        churn_prob = proba
-    predictions = (churn_prob >= 0.5).astype(int)
+        churn_prob = proba.ravel()
+
+    churn_prob = churn_prob.astype(float)
+    predictions = (churn_prob >= threshold).astype(int)
     return predictions, churn_prob

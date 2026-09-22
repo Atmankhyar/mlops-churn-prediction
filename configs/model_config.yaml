@@ -16,6 +16,12 @@ features:
 
 target: churned
 
+# Registration gate: a trained model is only promoted into the MLflow Model
+# Registry when its TEST roc_auc reaches this threshold. Runs that miss it are
+# still tracked as experiments — they just do not create a registry version.
+registration:
+  min_roc_auc: 0.66
+
 train_test_split:
   test_size: 0.2
   random_state: 42
@@ -38,6 +44,26 @@ xgboost:
   random_state: 42
   eval_metric: auc
   use_label_encoder: false
+
+xgboost_tuned:
+  n_estimators: 500
+  max_depth: 5
+  learning_rate: 0.03
+  subsample: 0.9
+  colsample_bytree: 0.9
+  min_child_weight: 3
+  gamma: 0.1
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  scale_pos_weight: 3
+  random_state: 42
+  eval_metric: auc
+
+train_test_split:
+  test_size: 0.20
+  validation_size: 0.20
+  random_state: 42
+  stratify: true
 
 metrics:
   - accuracy
