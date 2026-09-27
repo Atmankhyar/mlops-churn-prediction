@@ -53,7 +53,7 @@ def main() -> None:
     current["avg_monthly_charge"] = current["avg_monthly_charge"] * 1.6 + 25
     current["payment_failure_rate"] = (current["payment_failure_rate"] + 0.5).clip(upper=1.0)
 
-    report_path = generate_drift_report(reference, current)
+    report_path = generate_drift_report(reference, current, label="synthetic_validation")
     logger.info("HTML drift report saved to: %s", report_path)
 
     results = check_drift_threshold(reference, current)

@@ -27,6 +27,7 @@ def generate_drift_report(
     reference: pd.DataFrame,
     current: pd.DataFrame,
     output_dir: str | None = None,
+    label: str = "production",
 ) -> Path:
     """Generate an Evidently data drift HTML report.
 
@@ -34,6 +35,10 @@ def generate_drift_report(
         reference: Training dataset (baseline distribution).
         current: Recent production prediction requests.
         output_dir: Directory to save the HTML report.
+        label: Tag embedded in the report filename identifying whether
+            ``current`` is real inference history or a validation/synthetic
+            batch, so reports from different callers never collide and a
+            reader can tell which kind of report they're looking at.
 
     Returns:
         Path to the generated HTML report.
@@ -64,7 +69,7 @@ def generate_drift_report(
 
     out_dir = Path(output_dir or config["reports"]["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
-    report_path = out_dir / f"drift_report_{date.today().isoformat()}.html"
+    report_path = out_dir / f"drift_report_{label}_{date.today().isoformat()}.html"
     report.save_html(str(report_path))
 
     logger.info("Drift report saved to %s", report_path)
