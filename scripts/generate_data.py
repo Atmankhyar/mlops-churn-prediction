@@ -7,6 +7,7 @@ Usage:
     python scripts/generate_data.py
     python scripts/generate_data.py --customers 50000 --transactions 500000
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,15 +39,17 @@ def generate_customers(n: int = 100_000) -> pd.DataFrame:
     payment_methods = ["Credit card", "Bank transfer", "Electronic check", "Mailed check"]
 
     customer_ids = [str(uuid.uuid4()) for _ in range(n)]
-    df = pd.DataFrame({
-        "customer_id": customer_ids,
-        "age": np.random.randint(18, 80, n),
-        "gender": np.random.choice(["Male", "Female"], n),
-        "tenure_months": np.random.randint(1, 72, n),
-        "contract_type": np.random.choice(contract_types, n, p=[0.55, 0.25, 0.20]),
-        "payment_method": np.random.choice(payment_methods, n),
-        "monthly_charges": np.round(np.random.uniform(20, 120, n), 2),
-    })
+    df = pd.DataFrame(
+        {
+            "customer_id": customer_ids,
+            "age": np.random.randint(18, 80, n),
+            "gender": np.random.choice(["Male", "Female"], n),
+            "tenure_months": np.random.randint(1, 72, n),
+            "contract_type": np.random.choice(contract_types, n, p=[0.55, 0.25, 0.20]),
+            "payment_method": np.random.choice(payment_methods, n),
+            "monthly_charges": np.round(np.random.uniform(20, 120, n), 2),
+        }
+    )
     df["total_charges"] = np.round(df["monthly_charges"] * df["tenure_months"], 2)
     logger.info("Customers generated: %d rows", len(df))
     return df
@@ -62,16 +65,17 @@ def generate_transactions(
     date_range = (end_date - start_date).days
     payment_statuses = ["paid", "late", "failed"]
 
-    df = pd.DataFrame({
-        "transaction_id": [str(uuid.uuid4()) for _ in range(n)],
-        "customer_id": np.random.choice(customer_ids, n),
-        "transaction_date": [
-            start_date + timedelta(days=random.randint(0, date_range))
-            for _ in range(n)
-        ],
-        "amount": np.round(np.random.uniform(20, 130, n), 2),
-        "payment_status": np.random.choice(payment_statuses, n, p=[0.82, 0.12, 0.06]),
-    })
+    df = pd.DataFrame(
+        {
+            "transaction_id": [str(uuid.uuid4()) for _ in range(n)],
+            "customer_id": np.random.choice(customer_ids, n),
+            "transaction_date": [
+                start_date + timedelta(days=random.randint(0, date_range)) for _ in range(n)
+            ],
+            "amount": np.round(np.random.uniform(20, 130, n), 2),
+            "payment_status": np.random.choice(payment_statuses, n, p=[0.82, 0.12, 0.06]),
+        }
+    )
     logger.info("Transactions generated: %d rows", len(df))
     return df
 
@@ -86,17 +90,18 @@ def generate_support_interactions(
     date_range = (end_date - start_date).days
     categories = ["billing", "technical", "general"]
 
-    df = pd.DataFrame({
-        "interaction_id": [str(uuid.uuid4()) for _ in range(n)],
-        "customer_id": np.random.choice(customer_ids, n),
-        "ticket_date": [
-            start_date + timedelta(days=random.randint(0, date_range))
-            for _ in range(n)
-        ],
-        "category": np.random.choice(categories, n),
-        "resolution_days": np.random.randint(1, 15, n),
-        "sentiment_score": np.round(np.random.uniform(-1.0, 1.0, n), 3),
-    })
+    df = pd.DataFrame(
+        {
+            "interaction_id": [str(uuid.uuid4()) for _ in range(n)],
+            "customer_id": np.random.choice(customer_ids, n),
+            "ticket_date": [
+                start_date + timedelta(days=random.randint(0, date_range)) for _ in range(n)
+            ],
+            "category": np.random.choice(categories, n),
+            "resolution_days": np.random.randint(1, 15, n),
+            "sentiment_score": np.round(np.random.uniform(-1.0, 1.0, n), 3),
+        }
+    )
     logger.info("Support interactions generated: %d rows", len(df))
     return df
 
@@ -128,11 +133,13 @@ def generate_churn_labels(customers: pd.DataFrame) -> pd.DataFrame:
     churn_prob = np.clip(base_prob + tenure_mod + charge_mod, 0, 1)
     churned = np.random.binomial(1, churn_prob).astype(bool)
 
-    labels = pd.DataFrame({
-        "customer_id": df["customer_id"],
-        "label_month": date(2024, 3, 1),
-        "churned": churned,
-    })
+    labels = pd.DataFrame(
+        {
+            "customer_id": df["customer_id"],
+            "label_month": date(2024, 3, 1),
+            "churned": churned,
+        }
+    )
     churn_rate = churned.mean() * 100
     logger.info("Churn labels generated | Churn rate: %.1f%%", churn_rate)
     return labels

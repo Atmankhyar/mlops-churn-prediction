@@ -1,4 +1,5 @@
 """FastAPI application for the churn prediction model."""
+
 from __future__ import annotations
 
 import logging
@@ -177,25 +178,29 @@ def predict_batch(req: BatchPredictRequest) -> BatchPredictResponse:
         features = _request_to_dataframe(customer)
         try:
             preds, probas = predict_churn(model, features)
-            responses.append(PredictResponse(
-                customer_id=customer.customer_id,
-                prediction=int(preds[0]),
-                churn_probability=round(float(probas[0]), 4),
-                model_version=_model_version,
-                timestamp=datetime.now(timezone.utc),
-            ))
+            responses.append(
+                PredictResponse(
+                    customer_id=customer.customer_id,
+                    prediction=int(preds[0]),
+                    churn_probability=round(float(probas[0]), 4),
+                    model_version=_model_version,
+                    timestamp=datetime.now(timezone.utc),
+                )
+            )
             if _INFERENCE_LOGGING_ENABLED:
-                log_records.append({
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "model_version": _model_version,
-                    "tenure_months": float(customer.tenure_months),
-                    "total_spending_3m": float(customer.total_spending_3m),
-                    "avg_monthly_charge": float(customer.avg_monthly_charge),
-                    "payment_failure_rate": float(customer.payment_failure_rate),
-                    "avg_sentiment": float(customer.avg_sentiment),
-                    "churn_probability": round(float(probas[0]), 4),
-                    "predicted_churn": int(preds[0]),
-                })
+                log_records.append(
+                    {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "model_version": _model_version,
+                        "tenure_months": float(customer.tenure_months),
+                        "total_spending_3m": float(customer.total_spending_3m),
+                        "avg_monthly_charge": float(customer.avg_monthly_charge),
+                        "payment_failure_rate": float(customer.payment_failure_rate),
+                        "avg_sentiment": float(customer.avg_sentiment),
+                        "churn_probability": round(float(probas[0]), 4),
+                        "predicted_churn": int(preds[0]),
+                    }
+                )
         except Exception as exc:
             logger.error("Batch error for %s: %s", customer.customer_id, exc)
             raise HTTPException(status_code=500, detail=str(exc))

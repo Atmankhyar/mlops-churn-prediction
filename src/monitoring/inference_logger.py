@@ -1,4 +1,5 @@
 """Privacy-conscious SQLite logging for successful churn predictions."""
+
 from __future__ import annotations
 
 import logging

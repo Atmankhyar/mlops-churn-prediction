@@ -3,6 +3,7 @@
 This module mirrors `engineering.py` but uses PySpark for distributed
 processing of large datasets (1M+ rows).
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,8 +20,7 @@ def get_spark() -> "SparkSession":
     from pyspark.sql import SparkSession
 
     return (
-        SparkSession.builder
-        .appName("churn-feature-engineering")
+        SparkSession.builder.appName("churn-feature-engineering")
         .config("spark.sql.shuffle.partitions", "200")
         .getOrCreate()
     )
@@ -44,10 +44,12 @@ def build_transaction_features_spark(
     from pyspark.sql import functions as F
     from pyspark.sql.types import DoubleType
 
-    df = spark.read.format("delta" if "delta" in transactions_path else "csv") \
-        .option("header", True) \
-        .option("inferSchema", True) \
+    df = (
+        spark.read.format("delta" if "delta" in transactions_path else "csv")
+        .option("header", True)
+        .option("inferSchema", True)
         .load(transactions_path)
+    )
 
     # Filter to lookback window
     max_date = df.agg(F.max("transaction_date")).collect()[0][0]
@@ -58,10 +60,9 @@ def build_transaction_features_spark(
         F.sum("amount").alias("total_spending_3m"),
         F.avg("amount").alias("avg_monthly_charge"),
         F.count("transaction_id").alias("transaction_count_3m"),
-        (
-            F.sum((F.col("payment_status") == "failed").cast("int")) /
-            F.count("transaction_id")
-        ).cast(DoubleType()).alias("payment_failure_rate"),
+        (F.sum((F.col("payment_status") == "failed").cast("int")) / F.count("transaction_id"))
+        .cast(DoubleType())
+        .alias("payment_failure_rate"),
     )
 
     logger.info("Spark: transaction feature agg complete")
@@ -71,18 +72,25 @@ def build_transaction_features_spark(
 def build_support_features_spark(
     spark: "SparkSession",
     interactions_path: str,
+    lookback_months: int = 3,
 ) -> "DataFrame":
     """Distributed support interaction feature aggregation."""
     from pyspark.sql import functions as F
 
-    df = spark.read.format("delta" if "delta" in interactions_path else "csv") \
-        .option("header", True) \
-        .option("inferSchema", True) \
+    df = (
+        spark.read.format("delta" if "delta" in interactions_path else "csv")
+        .option("header", True)
+        .option("inferSchema", True)
         .load(interactions_path)
+    )
 
-    cutoff = df.agg(F.max("ticket_date")).collect()[0][0]
+    # Filter to lookback window (matches build_transaction_features_spark and
+    # the pandas build_support_features reference implementation).
+    max_date = df.agg(F.max("ticket_date")).collect()[0][0]
+    cutoff = F.add_months(F.lit(max_date), -lookback_months)
+    recent = df.filter(F.col("ticket_date") >= cutoff)
 
-    agg = df.groupBy("customer_id").agg(
+    agg = recent.groupBy("customer_id").agg(
         F.count("interaction_id").alias("support_tickets_3m"),
         F.avg("resolution_days").alias("avg_resolution_days"),
         F.avg("sentiment_score").alias("avg_sentiment"),
@@ -141,8 +149,7 @@ def build_and_save_feature_table(
     # ============================================================
 
     features = (
-        customers
-        .select(
+        customers.select(
             "customer_id",
             "tenure_months",
             "contract_type",
@@ -182,44 +189,36 @@ def build_and_save_feature_table(
         "customer_id",
         "tenure_months",
         "contract_type",
-
         # Transaction features
         F.coalesce(
             F.col("total_spending_3m"),
             F.lit(0.0),
         ).alias("total_spending_3m"),
-
         F.coalesce(
             F.col("avg_monthly_charge"),
             F.lit(0.0),
         ).alias("avg_monthly_charge"),
-
         F.coalesce(
             F.col("transaction_count_3m"),
             F.lit(0),
         ).alias("transaction_count_3m"),
-
         F.coalesce(
             F.col("payment_failure_rate"),
             F.lit(0.0),
         ).alias("payment_failure_rate"),
-
         # Support features
         F.coalesce(
             F.col("support_tickets_3m"),
             F.lit(0),
         ).alias("support_tickets_3m"),
-
         F.coalesce(
             F.col("avg_resolution_days"),
             F.lit(0.0),
         ).alias("avg_resolution_days"),
-
         F.coalesce(
             F.col("avg_sentiment"),
             F.lit(0.0),
         ).alias("avg_sentiment"),
-
         # Target
         "churned",
     )
@@ -235,27 +234,21 @@ def build_and_save_feature_table(
         row_count,
     )
 
-    print(
-        f"[INFO] Final feature table rows: {row_count:,}"
-    )
+    print(f"[INFO] Final feature table rows: {row_count:,}")
 
     # ============================================================
     # 6. Validate NULL values
     # ============================================================
 
-    null_counts = features.select(
-        [
-            F.sum(
-                F.col(column).isNull().cast("int")
-            ).alias(column)
-            for column in features.columns
-        ]
-    ).collect()[0].asDict()
-
-    total_nulls = sum(
-        value or 0
-        for value in null_counts.values()
+    null_counts = (
+        features.select(
+            [F.sum(F.col(column).isNull().cast("int")).alias(column) for column in features.columns]
+        )
+        .collect()[0]
+        .asDict()
     )
+
+    total_nulls = sum(value or 0 for value in null_counts.values())
 
     print("\n[NULL VALIDATION]")
 
@@ -263,9 +256,7 @@ def build_and_save_feature_table(
         print(f"  {column}: {count}")
 
     if total_nulls > 0:
-        raise ValueError(
-            f"Feature table still contains {total_nulls} NULL values."
-        )
+        raise ValueError(f"Feature table still contains {total_nulls} NULL values.")
 
     print("[PASS] No NULL values detected.")
 
@@ -273,15 +264,8 @@ def build_and_save_feature_table(
     # 7. Write final feature table to Delta Lake
     # ============================================================
 
-    features.write \
-        .format("delta") \
-        .mode("overwrite") \
-        .save(output_path)
+    features.write.format("delta").mode("overwrite").save(output_path)
 
-    print(
-        f"\n[PASS] Feature table written to Delta Lake: {output_path}"
-    )
+    print(f"\n[PASS] Feature table written to Delta Lake: {output_path}")
 
-    print(
-        f"[INFO] Rows written: {row_count:,}"
-    )
+    print(f"[INFO] Rows written: {row_count:,}")

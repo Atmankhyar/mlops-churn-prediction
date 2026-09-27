@@ -3,6 +3,7 @@
 Builds the CUSTOMER_FEATURES table from raw transactions, customers,
 and support interactions.
 """
+
 from __future__ import annotations
 
 import logging

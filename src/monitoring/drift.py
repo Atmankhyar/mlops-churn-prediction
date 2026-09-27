@@ -3,6 +3,7 @@
 Generates HTML reports comparing reference (training) data distribution
 to current (production) data distribution.
 """
+
 from __future__ import annotations
 
 import logging
@@ -38,12 +39,10 @@ def generate_drift_report(
         Path to the generated HTML report.
     """
     try:
-        from evidently.report import Report
         from evidently.metric_preset import DataDriftPreset, DataQualityPreset
+        from evidently.report import Report
     except ImportError as exc:
-        raise ImportError(
-            "evidentlyai is required: pip install evidentlyai"
-        ) from exc
+        raise ImportError("evidentlyai is required: pip install evidentlyai") from exc
 
     config = load_config()
     features = config["drift"]["features_to_monitor"]
@@ -55,10 +54,12 @@ def generate_drift_report(
     ref = reference[[c for c in features if c in reference.columns]].astype("float64")
     cur = current[[c for c in features if c in current.columns]].astype("float64")
 
-    report = Report(metrics=[
-        DataDriftPreset(),
-        DataQualityPreset(),
-    ])
+    report = Report(
+        metrics=[
+            DataDriftPreset(),
+            DataQualityPreset(),
+        ]
+    )
     report.run(reference_data=ref, current_data=cur)
 
     out_dir = Path(output_dir or config["reports"]["output_dir"])
@@ -79,8 +80,8 @@ def check_drift_threshold(
     Returns a dict mapping feature_name -> drift_detected (bool).
     """
     try:
-        from evidently.report import Report
         from evidently.metrics import ColumnDriftMetric
+        from evidently.report import Report
     except ImportError as exc:
         raise ImportError("evidentlyai required") from exc
 

@@ -1,9 +1,9 @@
 """Data cleaning utilities."""
+
 from __future__ import annotations
 
 import logging
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -82,9 +82,14 @@ def cast_types(df: pd.DataFrame) -> pd.DataFrame:
 def full_clean_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     """Run the full cleaning pipeline in sequence."""
     numerical_cols = [
-        "total_spending_3m", "avg_monthly_charge", "payment_failure_rate",
-        "transaction_count_3m", "support_tickets_3m", "avg_resolution_days",
-        "avg_sentiment", "tenure_months",
+        "total_spending_3m",
+        "avg_monthly_charge",
+        "payment_failure_rate",
+        "transaction_count_3m",
+        "support_tickets_3m",
+        "avg_resolution_days",
+        "avg_sentiment",
+        "tenure_months",
     ]
     df = drop_duplicates(df, subset=["customer_id"])
     df = impute_nulls(df)

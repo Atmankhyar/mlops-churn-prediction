@@ -8,6 +8,7 @@ data), so the "current" batch here is SYNTHETIC: a sample of the reference
 data with a couple of features deliberately perturbed to simulate drift.
 This validates the pipeline only -- it is not a real production drift result.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,9 +19,9 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from src.data.cleaning import full_clean_pipeline
-from src.features.engineering import build_full_feature_table
-from src.monitoring.drift import check_drift_threshold, generate_drift_report
+from src.data.cleaning import full_clean_pipeline  # noqa: E402
+from src.features.engineering import build_full_feature_table  # noqa: E402
+from src.monitoring.drift import check_drift_threshold, generate_drift_report  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -29,7 +30,9 @@ DATA_DIR = Path("data/raw")
 
 
 def main() -> None:
-    logger.info("Loading raw data and building the reference feature table (real training data) ...")
+    logger.info(
+        "Loading raw data and building the reference feature table (real training data) ..."
+    )
     customers = pd.read_csv(DATA_DIR / "customers.csv")
     transactions = pd.read_csv(DATA_DIR / "transactions.csv")
     interactions = pd.read_csv(DATA_DIR / "support_interactions.csv")

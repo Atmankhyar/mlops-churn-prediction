@@ -1,10 +1,12 @@
 """Model evaluation utilities."""
+
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
+    ConfusionMatrixDisplay,
     accuracy_score,
     confusion_matrix,
     f1_score,
@@ -12,7 +14,6 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
     roc_curve,
-    ConfusionMatrixDisplay,
 )
 
 
@@ -75,4 +76,5 @@ def plot_roc_curve(
 def print_classification_report(y_true, y_pred) -> None:
     """Print a formatted classification report."""
     from sklearn.metrics import classification_report
+
     print(classification_report(y_true, y_pred, target_names=["No Churn", "Churn"]))

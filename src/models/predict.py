@@ -1,13 +1,15 @@
 """Model loading and inference from MLflow Model Registry."""
+
 from __future__ import annotations
 
 import os
 from typing import Optional
 
-import mlflow
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
+
+import mlflow
 
 load_dotenv()
 

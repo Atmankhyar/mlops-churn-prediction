@@ -4,6 +4,7 @@ Supports loading data from:
   - Local CSV / Parquet files
   - Snowflake (via snowflake-connector-python)
 """
+
 from __future__ import annotations
 
 import os

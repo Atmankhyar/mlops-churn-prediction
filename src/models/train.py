@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import mlflow
 import mlflow.sklearn
 import mlflow.xgboost
 import pandas as pd
@@ -15,11 +14,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
-from src.models.evaluate import (
-    compute_metrics,
-    plot_confusion_matrix,
-    plot_roc_curve,
-)
+import mlflow
+from src.models.evaluate import compute_metrics, plot_confusion_matrix, plot_roc_curve
 
 logger = logging.getLogger(__name__)
 
@@ -88,18 +84,10 @@ def prepare_features(
 
     # Build final feature list
     feature_cols = numerical_cols + [
-        c
-        for c in df.columns
-        if any(
-            c.startswith(cat + "_")
-            for cat in categorical_cols
-        )
+        c for c in df.columns if any(c.startswith(cat + "_") for cat in categorical_cols)
     ]
 
-    feature_cols = [
-        c for c in feature_cols
-        if c in df.columns
-    ]
+    feature_cols = [c for c in feature_cols if c in df.columns]
 
     X = df[feature_cols]
     y = df[target].astype(int)
@@ -149,15 +137,9 @@ def split_train_validation_test(
     # Convert validation_size from a percentage of the
     # complete dataset to the corresponding fraction
     # of the train_val dataset.
-    validation_fraction = validation_size / (
-        1.0 - test_size
-    )
+    validation_fraction = validation_size / (1.0 - test_size)
 
-    stratify_train_val = (
-        y_train_val
-        if split_cfg["stratify"]
-        else None
-    )
+    stratify_train_val = y_train_val if split_cfg["stratify"] else None
 
     # Second split:
     # approximately 64% train
@@ -214,11 +196,7 @@ def train_xgboost(
     evaluation set instead of the training data.
     """
 
-    params = {
-        k: v
-        for k, v in config[model_config_key].items()
-        if k != "eval_metric"
-    }
+    params = {k: v for k, v in config[model_config_key].items() if k != "eval_metric"}
 
     eval_metric = config[model_config_key].get(
         "eval_metric",
@@ -298,9 +276,7 @@ def run_training(
         )
     )
 
-    mlflow.set_experiment(
-        config["experiment_name"]
-    )
+    mlflow.set_experiment(config["experiment_name"])
 
     # ---------------------------------------------------------
     # Feature preparation
@@ -341,9 +317,7 @@ def run_training(
 
     run_name = f"{model_type}-{dataset_version}"
 
-    with mlflow.start_run(
-        run_name=run_name
-    ) as run:
+    with mlflow.start_run(run_name=run_name) as run:
 
         # -----------------------------------------------------
         # Set tags
@@ -426,9 +400,7 @@ def run_training(
             params = config["xgboost_tuned"]
 
         else:
-            raise ValueError(
-                f"Unknown model_type: {model_type}"
-            )
+            raise ValueError(f"Unknown model_type: {model_type}")
 
         training_time_seconds = time.perf_counter() - fit_start
 
@@ -525,9 +497,7 @@ def run_training(
         # acceptance threshold earns a Model Registry version.
         #
 
-        registered_model_name = (
-            config["model_name"] if register else None
-        )
+        registered_model_name = config["model_name"] if register else None
 
         gate_auc = (
             min_registration_auc
@@ -556,23 +526,18 @@ def run_training(
         # -----------------------------------------------------
 
         log_model = (
-            mlflow.sklearn.log_model
-            if model_type == "random_forest"
-            else mlflow.xgboost.log_model
+            mlflow.sklearn.log_model if model_type == "random_forest" else mlflow.xgboost.log_model
         )
 
         log_model(
             model,
             "model",
-            registered_model_name=(
-                registered_model_name if gate_passed else None
-            ),
+            registered_model_name=(registered_model_name if gate_passed else None),
         )
 
         if gate_passed:
             logger.info(
-                "Registration gate PASSED "
-                "(roc_auc=%.4f >= %.4f) — registered as '%s'",
+                "Registration gate PASSED " "(roc_auc=%.4f >= %.4f) — registered as '%s'",
                 test_metrics["roc_auc"],
                 gate_auc,
                 registered_model_name,
@@ -590,9 +555,7 @@ def run_training(
         # -----------------------------------------------------
 
         logger.info(
-            "Run %s complete | "
-            "Test AUC=%.4f | Test F1=%.4f | "
-            "Test Recall=%.4f",
+            "Run %s complete | " "Test AUC=%.4f | Test F1=%.4f | " "Test Recall=%.4f",
             run.info.run_id[:8],
             test_metrics["roc_auc"],
             test_metrics["f1"],
@@ -600,8 +563,7 @@ def run_training(
         )
 
         logger.info(
-            "Validation | "
-            "AUC=%.4f | F1=%.4f | Recall=%.4f",
+            "Validation | " "AUC=%.4f | F1=%.4f | Recall=%.4f",
             val_metrics["roc_auc"],
             val_metrics["f1"],
             val_metrics["recall"],

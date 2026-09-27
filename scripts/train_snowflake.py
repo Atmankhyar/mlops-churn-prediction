@@ -10,6 +10,7 @@ Usage:
     python scripts/train_snowflake.py --model xgboost --version v2.0
     python scripts/train_snowflake.py --model xgboost --feature-month 2026-09-01
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,9 +21,9 @@ from pathlib import Path
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from src.data.cleaning import full_clean_pipeline
-from src.data.ingestion import load_customer_features_from_snowflake
-from src.models.train import run_training
+from src.data.cleaning import full_clean_pipeline  # noqa: E402
+from src.data.ingestion import load_customer_features_from_snowflake  # noqa: E402
+from src.models.train import run_training  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -86,9 +87,7 @@ def main(
 
     extra_params = {
         "training_rows": training_rows,
-        "source_table": (
-            f"{provenance['database']}.{provenance['schema']}.{provenance['table']}"
-        ),
+        "source_table": (f"{provenance['database']}.{provenance['schema']}.{provenance['table']}"),
         "feature_month": loaded_month,
     }
 
@@ -111,9 +110,7 @@ def main(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Train the churn model on Snowflake features."
-    )
+    parser = argparse.ArgumentParser(description="Train the churn model on Snowflake features.")
     parser.add_argument(
         "--model",
         default="xgboost",

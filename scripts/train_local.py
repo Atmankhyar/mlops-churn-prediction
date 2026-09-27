@@ -4,6 +4,7 @@ Usage:
     python scripts/train_local.py
     python scripts/train_local.py --model xgboost --version v1.1
 """
+
 from __future__ import annotations
 
 import argparse
@@ -16,9 +17,9 @@ import pandas as pd
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from src.data.cleaning import full_clean_pipeline
-from src.features.engineering import build_full_feature_table
-from src.models.train import run_training
+from src.data.cleaning import full_clean_pipeline  # noqa: E402
+from src.features.engineering import build_full_feature_table  # noqa: E402
+from src.models.train import run_training  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,7 +40,9 @@ def main(model_type: str, version: str) -> None:
 
     logger.info(
         "Loaded: customers=%d, transactions=%d, interactions=%d",
-        len(customers), len(transactions), len(interactions),
+        len(customers),
+        len(transactions),
+        len(interactions),
     )
 
     logger.info("Building feature table ...")
@@ -60,7 +63,11 @@ def main(model_type: str, version: str) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="random_forest", choices=["random_forest", "xgboost", "xgboost_tuned"],)
+    parser.add_argument(
+        "--model",
+        default="random_forest",
+        choices=["random_forest", "xgboost", "xgboost_tuned"],
+    )
     parser.add_argument("--version", default="v1.0")
     args = parser.parse_args()
     main(args.model, args.version)

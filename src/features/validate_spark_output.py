@@ -6,6 +6,7 @@ Runs the PySpark feature pipeline in-memory and validates:
   3. Nulls      -- reports unexpected null percentages per column
   4. Duplicates -- no duplicate customer_id rows in the output
 """
+
 from __future__ import annotations
 
 import io
@@ -16,7 +17,7 @@ import sys
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-from pathlib import Path
+from pathlib import Path  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Paths – resolve relative to project root regardless of cwd
@@ -24,10 +25,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_RAW = PROJECT_ROOT / "data" / "raw"
 
-CUSTOMERS_PATH    = str(DATA_RAW / "customers.csv")
+CUSTOMERS_PATH = str(DATA_RAW / "customers.csv")
 TRANSACTIONS_PATH = str(DATA_RAW / "transactions.csv")
 INTERACTIONS_PATH = str(DATA_RAW / "support_interactions.csv")
-LABELS_PATH       = str(DATA_RAW / "churn_labels.csv")
+LABELS_PATH = str(DATA_RAW / "churn_labels.csv")
 
 # Expected feature columns produced by build_and_save_feature_table
 EXPECTED_COLUMNS = [
@@ -73,7 +74,6 @@ def _rule(title: str) -> None:
     print(f"{'-' * 60}")
 
 
-
 def _ok(msg: str) -> None:
     print(f"  {PASS}  {msg}")
 
@@ -91,7 +91,8 @@ def _warn(msg: str) -> None:
 # ---------------------------------------------------------------------------
 def main() -> int:
     """Return 0 if all hard checks pass, 1 if any fail."""
-    from pyspark.sql import SparkSession, functions as F
+    from pyspark.sql import SparkSession
+    from pyspark.sql import functions as F
 
     print("\n" + "=" * 60)
     print("  Spark Feature-Engineering Validation")
@@ -101,8 +102,7 @@ def main() -> int:
     # 1. Build SparkSession (local mode, reduced verbosity)
     # ------------------------------------------------------------------
     spark = (
-        SparkSession.builder
-        .appName("churn-fe-validation")
+        SparkSession.builder.appName("churn-fe-validation")
         .master("local[*]")
         .config("spark.sql.shuffle.partitions", "8")
         .config("spark.ui.enabled", "false")
@@ -113,17 +113,17 @@ def main() -> int:
     # ------------------------------------------------------------------
     # 2. Read raw sources to get ground-truth counts
     # ------------------------------------------------------------------
-    customers    = spark.read.csv(CUSTOMERS_PATH,    header=True, inferSchema=True)
+    customers = spark.read.csv(CUSTOMERS_PATH, header=True, inferSchema=True)
     transactions = spark.read.csv(TRANSACTIONS_PATH, header=True, inferSchema=True)
     interactions = spark.read.csv(INTERACTIONS_PATH, header=True, inferSchema=True)
-    labels       = spark.read.csv(LABELS_PATH,       header=True, inferSchema=True)
+    labels = spark.read.csv(LABELS_PATH, header=True, inferSchema=True)
 
-    n_customers    = customers.select("customer_id").distinct().count()
+    n_customers = customers.select("customer_id").distinct().count()
     n_transactions = transactions.count()
     n_interactions = interactions.count()
-    n_labels       = labels.select("customer_id").distinct().count()
+    n_labels = labels.select("customer_id").distinct().count()
 
-    print(f"\n  Raw data summary:")
+    print("\n  Raw data summary:")
     print(f"    customers (distinct):    {n_customers:>10,}")
     print(f"    transactions (rows):     {n_transactions:>10,}")
     print(f"    support interactions:    {n_interactions:>10,}")
@@ -137,18 +137,19 @@ def main() -> int:
     print("\n  Building feature table in-memory ...")
 
     import sys as _sys
+
     _sys.path.insert(0, str(PROJECT_ROOT / "src"))
     from features.spark_engineering import (
-        build_transaction_features_spark,
         build_support_features_spark,
+        build_transaction_features_spark,
     )
 
-    tx_feats  = build_transaction_features_spark(spark, TRANSACTIONS_PATH)
+    tx_feats = build_transaction_features_spark(spark, TRANSACTIONS_PATH)
     sup_feats = build_support_features_spark(spark, INTERACTIONS_PATH)
 
     features = (
         customers.select("customer_id", "tenure_months", "contract_type")
-        .join(tx_feats,  on="customer_id", how="left")
+        .join(tx_feats, on="customer_id", how="left")
         .join(sup_feats, on="customer_id", how="left")
         .join(labels.select("customer_id", "churned"), on="customer_id", how="left")
     )
@@ -159,13 +160,13 @@ def main() -> int:
         "customer_id",
         "tenure_months",
         "contract_type",
-        F.coalesce(F.col("total_spending_3m"),    F.lit(0.0)).alias("total_spending_3m"),
-        F.coalesce(F.col("avg_monthly_charge"),    F.lit(0.0)).alias("avg_monthly_charge"),
-        F.coalesce(F.col("transaction_count_3m"),  F.lit(0)).alias("transaction_count_3m"),
-        F.coalesce(F.col("payment_failure_rate"),  F.lit(0.0)).alias("payment_failure_rate"),
-        F.coalesce(F.col("support_tickets_3m"),    F.lit(0)).alias("support_tickets_3m"),
-        F.coalesce(F.col("avg_resolution_days"),   F.lit(0.0)).alias("avg_resolution_days"),
-        F.coalesce(F.col("avg_sentiment"),         F.lit(0.0)).alias("avg_sentiment"),
+        F.coalesce(F.col("total_spending_3m"), F.lit(0.0)).alias("total_spending_3m"),
+        F.coalesce(F.col("avg_monthly_charge"), F.lit(0.0)).alias("avg_monthly_charge"),
+        F.coalesce(F.col("transaction_count_3m"), F.lit(0)).alias("transaction_count_3m"),
+        F.coalesce(F.col("payment_failure_rate"), F.lit(0.0)).alias("payment_failure_rate"),
+        F.coalesce(F.col("support_tickets_3m"), F.lit(0)).alias("support_tickets_3m"),
+        F.coalesce(F.col("avg_resolution_days"), F.lit(0.0)).alias("avg_resolution_days"),
+        F.coalesce(F.col("avg_sentiment"), F.lit(0.0)).alias("avg_sentiment"),
         "churned",
     )
 
@@ -185,11 +186,15 @@ def main() -> int:
     if total_rows == n_customers:
         _ok("Row count matches distinct customer count exactly.")
     elif abs(total_rows - n_customers) / max(n_customers, 1) < 0.01:
-        _warn(f"Row count differs by {abs(total_rows - n_customers):,} rows "
-              f"(<1%) – acceptable (label/customer alignment gap).")
+        _warn(
+            f"Row count differs by {abs(total_rows - n_customers):,} rows "
+            f"(<1%) – acceptable (label/customer alignment gap)."
+        )
     else:
-        _fail(f"Row count mismatch: delta = {total_rows - n_customers:+,}. "
-              f"Investigate join fanout or missing customers.")
+        _fail(
+            f"Row count mismatch: delta = {total_rows - n_customers:+,}. "
+            f"Investigate join fanout or missing customers."
+        )
         hard_fail = True
 
     # ------------------------------------------------------------------
@@ -198,7 +203,7 @@ def main() -> int:
     _rule("CHECK 2 - Column Presence")
     actual_cols = set(features.columns)
     missing = [c for c in EXPECTED_COLUMNS if c not in actual_cols]
-    extra   = [c for c in features.columns if c not in EXPECTED_COLUMNS]
+    extra = [c for c in features.columns if c not in EXPECTED_COLUMNS]
 
     if not missing:
         _ok(f"All {len(EXPECTED_COLUMNS)} expected columns present.")
@@ -219,22 +224,26 @@ def main() -> int:
     # CHECK 3 – Nulls (all columns must be 0 after imputation)
     # ------------------------------------------------------------------
     _rule("CHECK 3 - Null Analysis (post-imputation)")
-    null_counts = features.select(
-        [F.sum(F.col(c).isNull().cast("int")).alias(c) for c in features.columns]
-    ).collect()[0].asDict()
+    null_counts = (
+        features.select([F.sum(F.col(c).isNull().cast("int")).alias(c) for c in features.columns])
+        .collect()[0]
+        .asDict()
+    )
 
     any_bad_null = False
     for col_name in EXPECTED_COLUMNS:
         if col_name not in actual_cols:
             continue
-        null_n   = null_counts.get(col_name, 0)
+        null_n = null_counts.get(col_name, 0)
         null_pct = null_n / total_rows * 100 if total_rows else 0
 
         if null_n == 0:
             _ok(f"{col_name:<30} 0 nulls")
         else:
-            _fail(f"{col_name:<30} {null_n:,} nulls ({null_pct:.1f}%) "
-                  f"– UNEXPECTED: coalesce imputation should have eliminated nulls!")
+            _fail(
+                f"{col_name:<30} {null_n:,} nulls ({null_pct:.1f}%) "
+                f"– UNEXPECTED: coalesce imputation should have eliminated nulls!"
+            )
             any_bad_null = True
             hard_fail = True
 
@@ -245,12 +254,7 @@ def main() -> int:
     # CHECK 4 – Duplicate customer_id
     # ------------------------------------------------------------------
     _rule("CHECK 4 - Duplicate customer_id Keys")
-    dup_count = (
-        features.groupBy("customer_id")
-        .count()
-        .filter(F.col("count") > 1)
-        .count()
-    )
+    dup_count = features.groupBy("customer_id").count().filter(F.col("count") > 1).count()
 
     if dup_count == 0:
         _ok("No duplicate customer_id records – aggregation keys are unique.")
