@@ -3,6 +3,7 @@
 Uses a temporary SQLite database per test (via the INFERENCE_LOG_DB env
 override) so these tests never touch the real monitoring/inference_log.db.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -175,12 +176,18 @@ class TestReadRecentInference:
         now = datetime.now(timezone.utc)
 
         log_mod.log_prediction(
-            features=SAMPLE_FEATURES, probability=0.5, prediction=0,
-            model_version="v1", timestamp=now - timedelta(days=2),
+            features=SAMPLE_FEATURES,
+            probability=0.5,
+            prediction=0,
+            model_version="v1",
+            timestamp=now - timedelta(days=2),
         )
         log_mod.log_prediction(
-            features=SAMPLE_FEATURES, probability=0.6, prediction=1,
-            model_version="v1", timestamp=now - timedelta(days=10),
+            features=SAMPLE_FEATURES,
+            probability=0.6,
+            prediction=1,
+            model_version="v1",
+            timestamp=now - timedelta(days=10),
         )
 
         recent = log_mod.read_recent_inference(window_days=7)
@@ -202,12 +209,18 @@ class TestRetentionCleanup:
         now = datetime.now(timezone.utc)
 
         log_mod.log_prediction(
-            features=SAMPLE_FEATURES, probability=0.5, prediction=0,
-            model_version="v1", timestamp=now - timedelta(days=45),
+            features=SAMPLE_FEATURES,
+            probability=0.5,
+            prediction=0,
+            model_version="v1",
+            timestamp=now - timedelta(days=45),
         )
         log_mod.log_prediction(
-            features=SAMPLE_FEATURES, probability=0.6, prediction=1,
-            model_version="v1", timestamp=now - timedelta(days=5),
+            features=SAMPLE_FEATURES,
+            probability=0.6,
+            prediction=1,
+            model_version="v1",
+            timestamp=now - timedelta(days=5),
         )
 
         deleted = log_mod.cleanup_old_records(retention_days=30)

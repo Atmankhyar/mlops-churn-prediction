@@ -22,11 +22,6 @@ target: churned
 registration:
   min_roc_auc: 0.66
 
-train_test_split:
-  test_size: 0.2
-  random_state: 42
-  stratify: true
-
 random_forest:
   n_estimators: 200
   max_depth: 10

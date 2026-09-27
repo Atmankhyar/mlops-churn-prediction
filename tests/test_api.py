@@ -3,6 +3,7 @@
 These tests use httpx's TestClient and mock the model loading so no
 MLflow registry connection is required.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -24,7 +25,7 @@ def mock_model():
     name -- so predict_proba, not predict, must be the one configured here.
     """
     model = MagicMock()
-    model.predict_proba.return_value = np.array([[0.2, 0.8]])   # 80% churn prob
+    model.predict_proba.return_value = np.array([[0.2, 0.8]])  # 80% churn prob
     return model
 
 
@@ -41,9 +42,10 @@ def client(mock_model, tmp_path, monkeypatch):
     # silently turning every "mocked" test here into one that depends on
     # live infrastructure. Force it to fail so the startup except-branch
     # leaves our patched mock in place, as the fixture actually intends.
-    with patch("api.main._model", mock_model), \
-         patch("api.main._model_version", "test-v1"), \
-         patch("api.main.load_model_from_registry", side_effect=RuntimeError("mocked: no registry in tests")):
+    with patch("api.main._model", mock_model), patch("api.main._model_version", "test-v1"), patch(
+        "api.main.load_model_from_registry",
+        side_effect=RuntimeError("mocked: no registry in tests"),
+    ):
         with TestClient(app) as c:
             c.inference_db_path = db_path
             yield c
@@ -102,7 +104,7 @@ class TestPredictEndpoint:
     def test_predict_rejects_invalid_sentiment(self, client):
         bad_request = {**SAMPLE_REQUEST, "avg_sentiment": 999.0}
         resp = client.post("/predict", json=bad_request)
-        assert resp.status_code == 422   # Pydantic validation error
+        assert resp.status_code == 422  # Pydantic validation error
 
 
 class TestBatchPredictEndpoint:
@@ -142,9 +144,7 @@ class TestInferenceLogging:
             np.array([[0.2, 0.8]]),
             RuntimeError("simulated inference failure"),
         ]
-        resp = client.post(
-            "/predict/batch", json={"customers": [SAMPLE_REQUEST, SAMPLE_REQUEST]}
-        )
+        resp = client.post("/predict/batch", json={"customers": [SAMPLE_REQUEST, SAMPLE_REQUEST]})
         assert resp.status_code == 500
         assert _inference_log_row_count(client) == 0
 
@@ -163,4 +163,3 @@ class TestInferenceLogging:
         finally:
             conn.close()
         assert "customer_id" not in columns
-

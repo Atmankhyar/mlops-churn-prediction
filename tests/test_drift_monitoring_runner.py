@@ -4,6 +4,7 @@ Uses small synthetic DataFrames and an isolated monitoring_config.yaml
 (via a patched CONFIG_PATH) so these tests never touch the real
 monitoring/reports/ directory or the real inference log.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -85,9 +86,9 @@ def isolated_config(tmp_path, monkeypatch):
 class TestNormalOperation:
     def test_generates_report_with_sufficient_data(self, reference_df, isolated_config):
         current = _make_current(40)
-        with patch.object(
-            runner, "read_recent_inference", return_value=current
-        ), patch.object(runner, "load_reference_features", return_value=reference_df):
+        with patch.object(runner, "read_recent_inference", return_value=current), patch.object(
+            runner, "load_reference_features", return_value=reference_df
+        ):
             result = runner.run_monitoring()
 
         assert result["status"] == "completed"
@@ -98,9 +99,9 @@ class TestNormalOperation:
 
     def test_report_written_to_configured_reports_dir(self, reference_df, isolated_config):
         current = _make_current(40)
-        with patch.object(
-            runner, "read_recent_inference", return_value=current
-        ), patch.object(runner, "load_reference_features", return_value=reference_df):
+        with patch.object(runner, "read_recent_inference", return_value=current), patch.object(
+            runner, "load_reference_features", return_value=reference_df
+        ):
             result = runner.run_monitoring()
 
         report_path = Path(result["report_path"])
@@ -112,9 +113,9 @@ class TestNormalOperation:
 class TestInsufficientData:
     def test_zero_predictions_skips_cleanly(self, reference_df, isolated_config):
         empty = pd.DataFrame(columns=FEATURES)
-        with patch.object(
-            runner, "read_recent_inference", return_value=empty
-        ), patch.object(runner, "load_reference_features", return_value=reference_df):
+        with patch.object(runner, "read_recent_inference", return_value=empty), patch.object(
+            runner, "load_reference_features", return_value=reference_df
+        ):
             result = runner.run_monitoring()
 
         assert result["status"] == "skipped_no_data"
@@ -123,9 +124,9 @@ class TestInsufficientData:
 
     def test_too_few_predictions_skips_cleanly(self, reference_df, isolated_config):
         current = _make_current(5)
-        with patch.object(
-            runner, "read_recent_inference", return_value=current
-        ), patch.object(runner, "load_reference_features", return_value=reference_df):
+        with patch.object(runner, "read_recent_inference", return_value=current), patch.object(
+            runner, "load_reference_features", return_value=reference_df
+        ):
             result = runner.run_monitoring(min_sample_size=30)
 
         assert result["status"] == "skipped_insufficient_data"
@@ -134,9 +135,9 @@ class TestInsufficientData:
 
     def test_exactly_at_threshold_runs(self, reference_df, isolated_config):
         current = _make_current(30)
-        with patch.object(
-            runner, "read_recent_inference", return_value=current
-        ), patch.object(runner, "load_reference_features", return_value=reference_df):
+        with patch.object(runner, "read_recent_inference", return_value=current), patch.object(
+            runner, "load_reference_features", return_value=reference_df
+        ):
             result = runner.run_monitoring(min_sample_size=30)
 
         assert result["status"] == "completed"

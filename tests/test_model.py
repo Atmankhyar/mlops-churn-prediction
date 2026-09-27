@@ -1,4 +1,5 @@
 """Unit tests for model training and evaluation."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -21,16 +22,18 @@ from src.models.train import (
 @pytest.fixture
 def trained_rf_model():
     """Tiny RF model trained on dummy data."""
-    X = pd.DataFrame({
-        "tenure_months": [12, 24, 6, 48, 3, 36],
-        "total_spending_3m": [300, 200, 400, 150, 500, 100],
-        "avg_monthly_charge": [100, 66, 133, 50, 166, 33],
-        "payment_failure_rate": [0.1, 0.0, 0.3, 0.0, 0.5, 0.0],
-        "transaction_count_3m": [3, 3, 3, 3, 3, 3],
-        "support_tickets_3m": [2, 0, 4, 0, 5, 0],
-        "avg_resolution_days": [4.0, 2.0, 7.0, 1.0, 9.0, 1.0],
-        "avg_sentiment": [-0.3, 0.5, -0.8, 0.8, -1.0, 0.9],
-    })
+    X = pd.DataFrame(
+        {
+            "tenure_months": [12, 24, 6, 48, 3, 36],
+            "total_spending_3m": [300, 200, 400, 150, 500, 100],
+            "avg_monthly_charge": [100, 66, 133, 50, 166, 33],
+            "payment_failure_rate": [0.1, 0.0, 0.3, 0.0, 0.5, 0.0],
+            "transaction_count_3m": [3, 3, 3, 3, 3, 3],
+            "support_tickets_3m": [2, 0, 4, 0, 5, 0],
+            "avg_resolution_days": [4.0, 2.0, 7.0, 1.0, 9.0, 1.0],
+            "avg_sentiment": [-0.3, 0.5, -0.8, 0.8, -1.0, 0.9],
+        }
+    )
     y = pd.Series([1, 0, 1, 0, 1, 0])
     model = RandomForestClassifier(n_estimators=10, random_state=42)
     model.fit(X, y)
@@ -89,9 +92,7 @@ class TestRegistrationGate:
         assert get_min_registration_auc(config) == pytest.approx(0.66)
 
     def test_threshold_falls_back_when_config_omits_it(self):
-        assert get_min_registration_auc({}) == pytest.approx(
-            DEFAULT_MIN_REGISTRATION_AUC
-        )
+        assert get_min_registration_auc({}) == pytest.approx(DEFAULT_MIN_REGISTRATION_AUC)
 
 
 # ---------------------------------------------------------------------------
