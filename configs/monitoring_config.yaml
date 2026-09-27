@@ -16,3 +16,9 @@ reports:
 data_quality:
   missing_value_threshold: 0.05   # alert if >5% nulls
   outlier_std_threshold: 4.0      # alert if value > 4 std devs from mean
+
+inference_logging:
+  enabled: true
+  database_path: monitoring/inference_log.db
+  retention_days: 30
+  recent_window_days: 7

@@ -9,12 +9,13 @@ services:
       - .env
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
+      INFERENCE_LOG_DB: /app/monitoring/inference_log.db
     depends_on:
       mlflow:
         condition: service_started
     restart: unless-stopped
     volumes:
-      - ./monitoring/reports:/app/monitoring/reports
+      - ./monitoring:/app/monitoring
       - ./mlflow-artifacts:/mnt/mlflow-artifacts
 
   mlflow:

@@ -32,6 +32,11 @@ backups/
 # Monitoring reports
 monitoring/reports/
 
+# Production inference logging database
+monitoring/inference_log.db
+monitoring/inference_log.db-wal
+monitoring/inference_log.db-shm
+
 # Notebooks checkpoints
 .ipynb_checkpoints/
 

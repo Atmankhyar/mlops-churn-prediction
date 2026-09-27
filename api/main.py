@@ -19,10 +19,21 @@ from api.schemas import (
     PredictResponse,
 )
 from src.models.predict import load_model_from_registry, predict_churn
+from src.monitoring.drift import load_config as load_monitoring_config
+from src.monitoring.inference_logger import (
+    cleanup_old_records,
+    initialize_database,
+    log_prediction,
+    log_predictions,
+)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_inference_logging_config = load_monitoring_config().get("inference_logging", {})
+_INFERENCE_LOGGING_ENABLED: bool = bool(_inference_logging_config.get("enabled", False))
+_INFERENCE_LOG_RETENTION_DAYS: int = int(_inference_logging_config.get("retention_days", 30))
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -50,6 +61,15 @@ _model_version: str = "unknown"
 @app.on_event("startup")
 def load_model() -> None:
     global _model, _model_version
+
+    if _INFERENCE_LOGGING_ENABLED:
+        try:
+            initialize_database()
+            deleted = cleanup_old_records(retention_days=_INFERENCE_LOG_RETENTION_DAYS)
+            logger.info("Inference logging initialized; removed %d expired records", deleted)
+        except Exception:
+            logger.exception("Inference logging initialization failed; API will continue")
+
     try:
         _model = load_model_from_registry(stage="Production")
         if hasattr(_model, "metadata") and hasattr(_model.metadata, "run_id"):
@@ -67,6 +87,21 @@ def _get_model():
             detail="Model not available. Ensure a model is registered in MLflow as 'Production'.",
         )
     return _model
+
+
+def _log_prediction_safely(features: dict, probability: float, prediction: int) -> None:
+    """Log a successful prediction without affecting API availability."""
+    if not _INFERENCE_LOGGING_ENABLED:
+        return
+    try:
+        log_prediction(
+            features=features,
+            probability=probability,
+            prediction=prediction,
+            model_version=_model_version,
+        )
+    except Exception:
+        logger.exception("Inference logging failed; prediction remains successful")
 
 
 def _request_to_dataframe(req: PredictRequest) -> pd.DataFrame:
@@ -110,7 +145,7 @@ def predict(req: PredictRequest) -> PredictResponse:
         logger.error("Prediction failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
-    return PredictResponse(
+    response = PredictResponse(
         customer_id=req.customer_id,
         prediction=int(preds[0]),
         churn_probability=round(float(probas[0]), 4),
@@ -118,11 +153,26 @@ def predict(req: PredictRequest) -> PredictResponse:
         timestamp=datetime.now(timezone.utc),
     )
 
+    _log_prediction_safely(
+        features={
+            "tenure_months": req.tenure_months,
+            "total_spending_3m": req.total_spending_3m,
+            "avg_monthly_charge": req.avg_monthly_charge,
+            "payment_failure_rate": req.payment_failure_rate,
+            "avg_sentiment": req.avg_sentiment,
+        },
+        probability=float(probas[0]),
+        prediction=int(preds[0]),
+    )
+
+    return response
+
 
 @app.post("/predict/batch", response_model=BatchPredictResponse)
 def predict_batch(req: BatchPredictRequest) -> BatchPredictResponse:
     model = _get_model()
     responses = []
+    log_records = []
     for customer in req.customers:
         features = _request_to_dataframe(customer)
         try:
@@ -134,8 +184,26 @@ def predict_batch(req: BatchPredictRequest) -> BatchPredictResponse:
                 model_version=_model_version,
                 timestamp=datetime.now(timezone.utc),
             ))
+            if _INFERENCE_LOGGING_ENABLED:
+                log_records.append({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "model_version": _model_version,
+                    "tenure_months": float(customer.tenure_months),
+                    "total_spending_3m": float(customer.total_spending_3m),
+                    "avg_monthly_charge": float(customer.avg_monthly_charge),
+                    "payment_failure_rate": float(customer.payment_failure_rate),
+                    "avg_sentiment": float(customer.avg_sentiment),
+                    "churn_probability": round(float(probas[0]), 4),
+                    "predicted_churn": int(preds[0]),
+                })
         except Exception as exc:
             logger.error("Batch error for %s: %s", customer.customer_id, exc)
             raise HTTPException(status_code=500, detail=str(exc))
+
+    if _INFERENCE_LOGGING_ENABLED:
+        try:
+            log_predictions(log_records)
+        except Exception:
+            logger.exception("Batch inference logging failed; batch remains successful")
 
     return BatchPredictResponse(predictions=responses, total=len(responses))
