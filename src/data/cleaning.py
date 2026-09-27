@@ -57,18 +57,25 @@ def cast_types(df: pd.DataFrame) -> pd.DataFrame:
     bool_cols = ["churned"]
     int_cols = ["tenure_months", "transaction_count_3m", "support_tickets_3m"]
     float_cols = [
-        "total_spending_3m", "avg_monthly_charge", "payment_failure_rate",
-        "avg_resolution_days", "avg_sentiment",
+        "total_spending_3m",
+        "avg_monthly_charge",
+        "payment_failure_rate",
+        "avg_resolution_days",
+        "avg_sentiment",
     ]
+
     for col in bool_cols:
         if col in df.columns:
             df[col] = df[col].astype(bool)
+
     for col in int_cols:
         if col in df.columns:
-            df[col] = df[col].astype("Int64")
+            df[col] = pd.to_numeric(df[col], errors="coerce").round().astype("Int64")
+
     for col in float_cols:
         if col in df.columns:
-            df[col] = df[col].astype(float)
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
+
     return df
 
 

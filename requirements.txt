@@ -21,7 +21,7 @@ snowflake-sqlalchemy==1.5.3
 pyspark==3.5.1
 
 # Monitoring
-evidentlyai==0.4.30
+evidently==0.4.30
 
 # Data generation
 faker==24.11.0
@@ -29,5 +29,5 @@ faker==24.11.0
 # Utilities
 python-dotenv==1.0.1
 pyyaml==6.0.1
-requests==2.31.0
+requests==2.32.0
 joblib==1.4.2

@@ -48,9 +48,12 @@ def generate_drift_report(
     config = load_config()
     features = config["drift"]["features_to_monitor"]
 
-    # Select only monitored features present in both DataFrames
-    ref = reference[[c for c in features if c in reference.columns]]
-    cur = current[[c for c in features if c in current.columns]]
+    # Select only monitored features present in both DataFrames. Cast to
+    # plain float64: pandas nullable dtypes (e.g. Int64) upcast DataFrame.values
+    # to object arrays, which breaks Evidently's internal numpy correlation
+    # calculations (np.corrcoef/np.cov) in evidently==0.4.30.
+    ref = reference[[c for c in features if c in reference.columns]].astype("float64")
+    cur = current[[c for c in features if c in current.columns]].astype("float64")
 
     report = Report(metrics=[
         DataDriftPreset(),

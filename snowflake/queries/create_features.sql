@@ -5,7 +5,7 @@
 -- the ANALYTICS.CUSTOMER_FEATURES table.
 -- =============================================================================
 
-USE DATABASE MLOPS_DB;
+USE DATABASE mlops2_db;
 USE SCHEMA ANALYTICS;
 
 -- Set the feature window: last 3 calendar months
@@ -26,7 +26,7 @@ SELECT
         NULLIF(COUNT(transaction_id), 0),
         4
     )                                                   AS payment_failure_rate
-FROM MLOPS_DB.RAW.TRANSACTIONS
+FROM mlops2_db.RAW.TRANSACTIONS
 WHERE transaction_date >= $lookback_start
   AND transaction_date <  $feature_month
 GROUP BY customer_id;
@@ -40,7 +40,7 @@ SELECT
     COUNT(interaction_id)       AS support_tickets_3m,
     AVG(resolution_days)        AS avg_resolution_days,
     AVG(sentiment_score)        AS avg_sentiment
-FROM MLOPS_DB.RAW.SUPPORT_INTERACTIONS
+FROM mlops2_db.RAW.SUPPORT_INTERACTIONS
 WHERE ticket_date >= $lookback_start
   AND ticket_date <  $feature_month
 GROUP BY customer_id;
@@ -48,7 +48,7 @@ GROUP BY customer_id;
 -- -----------------------------------------------------------------------------
 -- Step 3: Join and insert into CUSTOMER_FEATURES
 -- -----------------------------------------------------------------------------
-INSERT INTO MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES (
+INSERT INTO mlops2_db.ANALYTICS.CUSTOMER_FEATURES (
     customer_id,
     feature_month,
     total_spending_3m,
@@ -77,10 +77,10 @@ SELECT
     c.contract_type,
     COALESCE(l.churned, FALSE)              AS churned,
     'v1.0'                                  AS pipeline_version
-FROM MLOPS_DB.RAW.CUSTOMERS c
+FROM mlops2_db.RAW.CUSTOMERS c
 LEFT JOIN tmp_transaction_features t ON c.customer_id = t.customer_id
 LEFT JOIN tmp_support_features     s ON c.customer_id = s.customer_id
-LEFT JOIN MLOPS_DB.RAW.CHURN_LABELS l
+LEFT JOIN mlops2_db.RAW.CHURN_LABELS l
     ON c.customer_id = l.customer_id
     AND l.label_month = $feature_month;
 
@@ -90,5 +90,5 @@ SELECT
     AVG(total_spending_3m)                  AS avg_spending,
     ROUND(AVG(churned::INT) * 100, 2)       AS churn_rate_pct,
     $feature_month                          AS feature_month
-FROM MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES
+FROM mlops2_db.ANALYTICS.CUSTOMER_FEATURES
 WHERE feature_month = $feature_month;

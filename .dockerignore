@@ -1,0 +1,41 @@
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Git metadata
+.git/
+.gitignore
+
+# MLflow local state and artifacts
+mlflow.db
+mlflow.db-*
+mlflow-artifacts/
+mlruns/
+
+# Local backups and generated data
+backups/
+data/
+notebooks/
+
+# Local monitoring output
+monitoring/reports/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test and coverage artifacts
+.coverage
+htmlcov/

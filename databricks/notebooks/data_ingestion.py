@@ -64,7 +64,7 @@ SNOWFLAKE_OPTIONS = {
     "sfURL":       os.getenv("SNOWFLAKE_ACCOUNT"),
     "sfUser":      os.getenv("SNOWFLAKE_USER"),
     "sfPassword":  os.getenv("SNOWFLAKE_PASSWORD"),
-    "sfDatabase":  "MLOPS_DB",
+    "sfDatabase":  "mlops2_db",
     "sfSchema":    "RAW",
     "sfWarehouse": "COMPUTE_WH",
 }

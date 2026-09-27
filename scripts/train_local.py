@@ -60,7 +60,7 @@ def main(model_type: str, version: str) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="random_forest", choices=["random_forest", "xgboost"])
+    parser.add_argument("--model", default="random_forest", choices=["random_forest", "xgboost", "xgboost_tuned"],)
     parser.add_argument("--version", default="v1.0")
     args = parser.parse_args()
     main(args.model, args.version)

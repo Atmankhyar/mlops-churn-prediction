@@ -5,7 +5,7 @@
 -- before feeding data into model training.
 -- =============================================================================
 
-USE DATABASE MLOPS_DB;
+USE DATABASE mlops2_db;
 
 -- -----------------------------------------------------------------------------
 -- Check 1: Null rates in CUSTOMER_FEATURES
@@ -17,7 +17,7 @@ SELECT
     SUM(CASE WHEN avg_monthly_charge  IS NULL THEN 1 ELSE 0 END) AS null_avg_charge,
     SUM(CASE WHEN tenure_months       IS NULL THEN 1 ELSE 0 END) AS null_tenure,
     SUM(CASE WHEN churned             IS NULL THEN 1 ELSE 0 END) AS null_label
-FROM MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES;
+FROM mlops2_db.ANALYTICS.CUSTOMER_FEATURES;
 
 -- -----------------------------------------------------------------------------
 -- Check 2: Class balance in churn labels
@@ -27,9 +27,9 @@ SELECT
     COUNT(*)                             AS count,
     ROUND(COUNT(*) * 100.0 /
         SUM(COUNT(*)) OVER (), 2)        AS pct
-FROM MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES
+FROM mlops2_db.ANALYTICS.CUSTOMER_FEATURES
 WHERE feature_month = (
-    SELECT MAX(feature_month) FROM MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES
+    SELECT MAX(feature_month) FROM mlops2_db.ANALYTICS.CUSTOMER_FEATURES
 )
 GROUP BY churned;
 
@@ -44,17 +44,17 @@ SELECT
     ROUND(AVG(avg_monthly_charge), 2)    AS avg_charge,
     ROUND(AVG(payment_failure_rate), 4)  AS avg_fail_rate,
     ROUND(AVG(avg_sentiment), 4)         AS avg_sentiment
-FROM MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES
+FROM mlops2_db.ANALYTICS.CUSTOMER_FEATURES
 WHERE feature_month = (
-    SELECT MAX(feature_month) FROM MLOPS_DB.ANALYTICS.CUSTOMER_FEATURES
+    SELECT MAX(feature_month) FROM mlops2_db.ANALYTICS.CUSTOMER_FEATURES
 );
 
 -- -----------------------------------------------------------------------------
 -- Check 4: Orphaned transactions (no matching customer)
 -- -----------------------------------------------------------------------------
 SELECT COUNT(*) AS orphaned_transactions
-FROM MLOPS_DB.RAW.TRANSACTIONS t
-LEFT JOIN MLOPS_DB.RAW.CUSTOMERS c ON t.customer_id = c.customer_id
+FROM mlops2_db.RAW.TRANSACTIONS t
+LEFT JOIN mlops2_db.RAW.CUSTOMERS c ON t.customer_id = c.customer_id
 WHERE c.customer_id IS NULL;
 
 -- -----------------------------------------------------------------------------
@@ -65,7 +65,7 @@ SELECT
     COUNT(*)                               AS predictions,
     ROUND(AVG(churn_probability), 4)       AS avg_churn_prob,
     SUM(prediction)                        AS churn_flags
-FROM MLOPS_DB.ML.PREDICTION_LOG
+FROM mlops2_db.ML.PREDICTION_LOG
 WHERE request_timestamp >= DATEADD('DAY', -7, CURRENT_TIMESTAMP())
 GROUP BY prediction_date
 ORDER BY prediction_date DESC;

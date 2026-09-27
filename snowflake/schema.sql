@@ -7,9 +7,9 @@
 
 -- Databases & Schemas
 -- -----------------------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS MLOPS_DB;
+CREATE DATABASE IF NOT EXISTS mlops2_db;
 
-USE DATABASE MLOPS_DB;
+USE DATABASE mlops2_db;
 
 CREATE SCHEMA IF NOT EXISTS RAW;
 CREATE SCHEMA IF NOT EXISTS ANALYTICS;
@@ -18,7 +18,7 @@ CREATE SCHEMA IF NOT EXISTS ML;
 -- =============================================================================
 -- RAW LAYER  (raw ingested data, unchanged from source)
 -- =============================================================================
-USE SCHEMA MLOPS_DB.RAW;
+USE SCHEMA mlops2_db.RAW;
 
 CREATE OR REPLACE TABLE CUSTOMERS (
     customer_id        VARCHAR(36)   NOT NULL PRIMARY KEY,
@@ -62,7 +62,7 @@ CREATE OR REPLACE TABLE CHURN_LABELS (
 -- =============================================================================
 -- ANALYTICS LAYER  (cleaned, aggregated, feature-engineered)
 -- =============================================================================
-USE SCHEMA MLOPS_DB.ANALYTICS;
+USE SCHEMA mlops2_db.ANALYTICS;
 
 CREATE OR REPLACE TABLE CUSTOMER_FEATURES (
     customer_id            VARCHAR(36)   NOT NULL,
@@ -90,7 +90,7 @@ CREATE OR REPLACE TABLE CUSTOMER_FEATURES (
 -- =============================================================================
 -- ML LAYER  (training splits, prediction logs, model metadata)
 -- =============================================================================
-USE SCHEMA MLOPS_DB.ML;
+USE SCHEMA mlops2_db.ML;
 
 CREATE OR REPLACE TABLE TRAINING_DATASETS (
     dataset_version    VARCHAR(20)   NOT NULL,

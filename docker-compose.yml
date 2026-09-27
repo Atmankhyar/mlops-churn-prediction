@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   api:
@@ -9,30 +8,32 @@ services:
     env_file:
       - .env
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     depends_on:
-      - mlflow
+      mlflow:
+        condition: service_started
     restart: unless-stopped
     volumes:
       - ./monitoring/reports:/app/monitoring/reports
+      - ./mlflow-artifacts:/mnt/mlflow-artifacts
 
   mlflow:
     image: python:3.11-slim
     container_name: mlflow-server
-    command: >
-      bash -c "pip install mlflow boto3 --quiet &&
-               mlflow server
-               --backend-store-uri sqlite:///mlflow.db
-               --default-artifact-root s3://${S3_ARTIFACT_BUCKET}/mlflow
-               --host 0.0.0.0
-               --port 5000"
+    working_dir: /mlflow
+    command:
+      - bash
+      - -c
+      - |
+        pip install --no-cache-dir "mlflow==2.13.0" "sqlalchemy==1.4.54" &&
+        exec mlflow server \
+          --backend-store-uri sqlite:////mlflow/mlflow.db \
+          --default-artifact-root /mlflow/mlflow-artifacts \
+          --host 0.0.0.0 \
+          --port 5000
     ports:
       - "5000:5000"
-    env_file:
-      - .env
     volumes:
-      - mlflow-data:/mlflow
+      - ./mlflow.db:/mlflow/mlflow.db
+      - ./mlflow-artifacts:/mlflow/mlflow-artifacts
     restart: unless-stopped
-
-volumes:
-  mlflow-data:

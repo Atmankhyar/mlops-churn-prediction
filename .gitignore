@@ -26,6 +26,9 @@ mlflow.db
 mlflow-artifacts/
 mlruns/
 
+# Local database/artifact backups (created during Docker/MLflow troubleshooting)
+backups/
+
 # Monitoring reports
 monitoring/reports/
 

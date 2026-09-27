@@ -97,8 +97,6 @@ def build_full_feature_table(
     df = df.merge(labels[["customer_id", "churned"]], on="customer_id", how="left")
 
     # Encode categorical
-    df = pd.get_dummies(df, columns=["contract_type"], drop_first=False)
-
     logger.info(
         "Feature table shape: %s | Churn rate: %.2f%%",
         df.shape,
