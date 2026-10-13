@@ -1,7 +1,7 @@
 # End-to-End MLOps: Customer Churn Prediction
 
-[![CI](https://github.com/YOUR_USERNAME/mlops-churn-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/mlops-churn-prediction/actions/workflows/ci.yml)
-[![CD](https://github.com/YOUR_USERNAME/mlops-churn-prediction/actions/workflows/cd.yml/badge.svg)](https://github.com/YOUR_USERNAME/mlops-churn-prediction/actions/workflows/cd.yml)
+[![CI](https://github.com/Atmankhyar/mlops-churn-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/Atmankhyar/mlops-churn-prediction/actions/workflows/ci.yml)
+[![CD](https://github.com/Atmankhyar/mlops-churn-prediction/actions/workflows/cd.yml/badge.svg)](https://github.com/Atmankhyar/mlops-churn-prediction/actions/workflows/cd.yml)
 
 A **portfolio-grade, production-ready MLOps pipeline** for customer churn prediction, demonstrating the full lifecycle from raw data to a monitored REST API deployed on AWS.
 
@@ -87,10 +87,14 @@ A **portfolio-grade, production-ready MLOps pipeline** for customer churn predic
 | Transactions | 1,000,000+ |
 | Support interactions | 500,000+ |
 | Features engineered | 9 |
+| Test coverage | 73% (CI gate: 70%) |
 | Best model AUC-ROC | *(fill in after training)* |
 | Best model F1 | *(fill in after training)* |
 | API latency (p99) | *(fill in after deployment)* |
 | Databricks processing time | *(fill in after run)* |
+
+Dataset sizes are the defaults of `scripts/generate_data.py` (synthetic data).
+Model and latency figures are left blank until measured.
 
 ---
 
@@ -99,7 +103,7 @@ A **portfolio-grade, production-ready MLOps pipeline** for customer churn predic
 ### 1. Clone and set up environment
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/mlops-churn-prediction.git
+git clone https://github.com/Atmankhyar/mlops-churn-prediction.git
 cd mlops-churn-prediction
 
 python -m venv .venv
@@ -119,7 +123,7 @@ cp .env.example .env
 ### 3. Generate synthetic dataset
 
 ```bash
-python scripts/generate_data.py
+python scripts/generate_data.py   # options: --customers --transactions --interactions
 # Generates: data/raw/customers.csv (100K rows)
 #            data/raw/transactions.csv (1M rows)
 #            data/raw/support_interactions.csv (500K rows)
@@ -168,6 +172,19 @@ uvicorn api.main:app --reload --port 8000
 
 API docs: http://localhost:8000/docs
 
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Service and model-load status |
+| `GET /model/info` | Registered model name, version and stage |
+| `POST /predict` | Single churn prediction |
+| `POST /predict/batch` | Batch predictions |
+
+Every prediction is logged to `monitoring/inference_log.db` for drift monitoring.
+
+> **Note:** `docker-compose.yml` mounts the local `mlflow.db` and `mlflow-artifacts/`
+> (both git-ignored). A fresh clone must train a model first, or restore these files,
+> before `/predict` can load a registered model.
+
 ### Example prediction request
 
 ```bash
@@ -203,15 +220,30 @@ Expected response:
 
 | Phase | Status | Description |
 |---|---|---|
-| 1 — Local ML | ⬜ | Data generation, feature engineering, sklearn/XGBoost baseline |
-| 2 — MLflow | ⬜ | Experiment tracking, model registry |
-| 3 — PySpark | ⬜ | Distributed feature engineering (local Spark) |
-| 4 — Databricks | ⬜ | Cloud feature engineering + Delta Lake |
-| 5 — Snowflake | ⬜ | Data warehouse integration |
-| 6 — FastAPI + Docker | ⬜ | Containerized model serving |
+| 1 — Local ML | ✅ | Data generation, feature engineering, sklearn/XGBoost baseline |
+| 2 — MLflow | ✅ | Experiment tracking, model registry (`churn-predictor`, 11 versions) |
+| 3 — PySpark | ✅ | Distributed feature engineering (local Spark) + validation |
+| 4 — Databricks | 🟡 | Notebooks and job definition written; cloud run not yet recorded |
+| 5 — Snowflake | 🟡 | Schema, queries and `train_snowflake.py` written; not yet verified end to end |
+| 6 — FastAPI + Docker | ✅ | Containerized model serving with inference logging |
 | 7 — AWS EC2 | ⬜ | Production deployment |
-| 8 — GitHub Actions | ⬜ | CI/CD pipeline |
-| 9 — Evidently | ⬜ | Drift monitoring |
+| 8 — GitHub Actions | 🟡 | `ci.yml` and `cd.yml` written; repo not yet pushed, secrets not set |
+| 9 — Evidently | ✅ | Drift monitoring runner (`scripts/run_drift_monitoring.py`) |
+
+✅ done · 🟡 implemented, not fully verified · ⬜ not started
+
+---
+
+## Drift Monitoring
+
+```bash
+python scripts/run_drift_monitoring.py
+```
+
+Compares recently logged inference requests against the training reference data
+using Evidently and writes an HTML report to `monitoring/reports/`. If fewer than
+30 recent predictions exist, monitoring is skipped rather than reporting on
+insufficient data. Settings live in `configs/monitoring_config.yaml`.
 
 ---
 
@@ -227,13 +259,14 @@ mlops-churn-prediction/
 ├── mlflow/               # MLproject
 ├── monitoring/reports/   # Evidently HTML reports (git-ignored)
 ├── notebooks/            # EDA + training notebooks
-├── scripts/              # generate_data.py, train_local.py, deploy.sh
+├── scripts/              # generate_data, train_local, train_snowflake,
+│                         # run_drift_monitoring, validate_drift_monitoring, deploy.sh
 ├── snowflake/            # schema.sql + SQL queries
 ├── src/
 │   ├── data/             # ingestion.py, cleaning.py
-│   ├── features/         # engineering.py, spark_engineering.py
+│   ├── features/         # engineering.py, spark_engineering.py, validate_spark_output.py
 │   ├── models/           # train.py, evaluate.py, predict.py
-│   └── monitoring/       # drift.py (Evidently)
+│   └── monitoring/       # drift.py (Evidently), inference_logger.py
 ├── tests/                # pytest test suite
 ├── Dockerfile
 ├── docker-compose.yml
